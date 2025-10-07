@@ -10,7 +10,7 @@ SLEN:   PUSH BP
         PUSH EBX
         MOV EBX, [BP+8]
         
-        XOR EAX 
+        XOR EAX, EAX
 
         SLEN_LOOP:  CMP b[EBX], 0
                     JZ SLEN_FIN:
@@ -103,6 +103,8 @@ RET
 SCAT:   PUSH BP 
         MOV BP, SP
 
+        MOV EAX, [BP + 12]
+
         PUSH EBX
         PUSH ECX
 
@@ -127,4 +129,110 @@ SCAT:   PUSH BP
                         
                         MOV SP, BP
                         POP BP 
+RET
+
+;   SPLIT
+;   usage:
+;       PUSH < str >
+;       PUSH <char >
+;       PUSH <p_arr>
+;       CALL SPLIT @retrieve EAX : <p_arr>
+;       ADD SP, 12
+;  
+SPLIT:  PUSH BP 
+        MOV BP, SP
+
+        PUSH ECX
+        PUSH EFX
+
+        MOV EAX, [BP +  8]
+        MOV ECX, [BP + 12]
+        MOV EFX, [BP + 16]
+
+        SPLIT_WORD:     CMP b[EFX], 0
+                        JZ SPLIT_FIN
+
+                        MOV EBX, [EAX]
+                        
+                        SPLIT_LOOP:     CMP b[EFX], ECX
+                                        JZ SPLIT_NEXT
+                                        CMP b[EFX], 0
+                                        JZ SPLIT_NEXT
+
+                                        MOV b[EBX], b[EFX]
+                                        ADD EBX, 1
+                                        ADD EFX, 1
+                        JMP SPLIT_LOOP
+
+                        SPLIT_NEXT: XOR b[EBX], b[EBX]
+                        ADD EAX, 4
+        JMP SPLIT_WORD
+
+        SPLIT_FIN: MOV [EAX], -1
+        MOV EAX, [BP + 8]
+        
+        POP EFX
+        POP ECX
+
+        MOV SP, BP
+        POP BP
+RET
+
+
+;   STRIM
+;   usage:
+;       PUSH < str >
+;       CALL STRIM @retrieve EAX : < str >
+;       ADD SP, 4
+;  
+STRIM:  PUSH BP
+        MOV BP, SP
+        
+        PUSH EBX
+        PUSH ECX
+        PUSH EDX
+
+        MOV EAX, [BP + 8]
+        MOV EBX, EAX ; first char
+        MOV ECX, EAX
+        MOV EDX, EAX ; last char
+
+        STRIM_FIRSTL:   CMP b[EBX], 0
+                        JZ STRIM_LASTL    
+                        CMP b[EBX], ' '
+                        JNZ STRIM_LASTL
+
+                        ADD EBX, 1
+                        ADD ECX, 1
+        JMP STRIM_FIRSTL
+
+        STRIM_LASTL:    CMP b[ECX], 0
+                        JZ STRIM_BUILD   
+                        
+                        CMP b[ECX], ' '
+                        JZ STRIM_SKIPCHAR
+                        
+                        MOV EDX, ECX
+                        ADD EDX, 1
+
+                        STRIM_SKIPCHAR: ADD ECX, 1                        
+        JMP STRIM_LASTL
+
+        STRIM_BUILD:    CMP EBX, EDX
+                        JNN STRIM_FIN
+
+                        MOV b[EAX], b[EBX]
+                        ADD EAX, 1
+                        ADD EBX, 1
+        JMP STRIM_BUILD
+
+        STRIM_FIN: MOV b[EAX], 0
+        MOV EAX, [BP + 8]
+
+        POP EDX
+        POP ECX
+        POP EBX
+
+        MOV SP, BP
+        POP BP
 RET
